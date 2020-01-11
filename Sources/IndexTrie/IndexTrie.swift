@@ -26,12 +26,12 @@ public class IndexTrie<T : Comparable> {
     private var lazyLimit = -1;
     private var rootDict : Dictionary<Substring, IndexTrieNode>!
     
-    init(lazyLimit: Int = -1) {
+    public init(lazyLimit: Int = -1) {
         self.lazyLimit = lazyLimit
         rootDict = Dictionary<Substring, IndexTrieNode>()
     }
     
-    func clear() {
+    public func clear() {
         rootDict.removeAll()
     }
 
@@ -119,11 +119,11 @@ public class IndexTrie<T : Comparable> {
         add(string, index:index, parentNode: tn, charOffset: charOffset+1)
     }
         
-    func getIndices(_ string: String) -> Array<T>? {
+    public func getIndices(_ string: String) -> Array<T>? {
         return getIndicesWithParent(string)
     }
     
-    func addString(_ string: String, index: T) {
+    public func addString(_ string: String, index: T) {
         add(string, index:index)
     }
 }
