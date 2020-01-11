@@ -8,7 +8,7 @@
 
 import Foundation
 
-class IndexTrie<T : Comparable> {
+class ITrie<T : Comparable> {
 
     class IndexTrieNode {
         var index                   : T?
