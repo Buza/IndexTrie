@@ -3,7 +3,7 @@ import XCTest
 
 final class IndexTrieTests: XCTestCase {
     func test1() {
-        let indexTrie = ITrie<Int>()
+        let indexTrie = IndexTrie<Int>()
         indexTrie.addString("abc", index:1)
         indexTrie.addString("ghi", index:2)
 
@@ -13,7 +13,7 @@ final class IndexTrieTests: XCTestCase {
     }
     
     func test2() {
-        let indexTrie = ITrie<Int>()
+        let indexTrie = IndexTrie<Int>()
         indexTrie.addString("abc", index:1)
         indexTrie.addString("ghi", index:2)
 
@@ -22,7 +22,7 @@ final class IndexTrieTests: XCTestCase {
     }
     
     func test3() {
-        let indexTrie = ITrie<Int>()
+        let indexTrie = IndexTrie<Int>()
         indexTrie.addString("abc", index:1)
         indexTrie.addString("abd", index:2)
 
@@ -32,7 +32,7 @@ final class IndexTrieTests: XCTestCase {
     }
     
     func test4() {
-        let indexTrie = ITrie<Int>()
+        let indexTrie = IndexTrie<Int>()
         indexTrie.addString("abc", index:1)
         indexTrie.addString("abd", index:2)
 
@@ -43,7 +43,7 @@ final class IndexTrieTests: XCTestCase {
     }
     
     func test5() {
-        let indexTrie = ITrie<Int>()
+        let indexTrie = IndexTrie<Int>()
         indexTrie.addString("abcasdfasdfasdf", index:1)
         indexTrie.addString("abdx", index:2)
 
@@ -54,7 +54,7 @@ final class IndexTrieTests: XCTestCase {
     }
     
     func test6() {
-        let indexTrie = ITrie<Int>(lazyLimit: 2)
+        let indexTrie = IndexTrie<Int>(lazyLimit: 2)
         indexTrie.addString("abcasdfasdfasdf", index:5)
 
         let indices = indexTrie.getIndices("abcasdfasdfasd")
@@ -66,7 +66,7 @@ final class IndexTrieTests: XCTestCase {
     func test7() {
         self.measure {
             
-            let indexTrie = ITrie<Int>()
+            let indexTrie = IndexTrie<Int>()
             indexTrie.addString("abcasdfasdfasdfabcasdfasdfasdf", index:1)
             indexTrie.addString("bcasdfasdfasdfaabcasdfasdfasdf", index:2)
             indexTrie.addString("casdfasdfasdfababcasdfasdfasdf", index:3)
@@ -90,7 +90,7 @@ final class IndexTrieTests: XCTestCase {
     func test8() {
         self.measure {
             
-            let indexTrie = ITrie<Int>(lazyLimit: 5)
+            let indexTrie = IndexTrie<Int>(lazyLimit: 5)
             indexTrie.addString("abcasdfasdfasdfabcasdfasdfasdf", index:1)
             indexTrie.addString("bcasdfasdfasdfaabcasdfasdfasdf", index:2)
             indexTrie.addString("casdfasdfasdfababcasdfasdfasdf", index:3)
@@ -112,7 +112,7 @@ final class IndexTrieTests: XCTestCase {
     }
     
     func test9() {
-        let indexTrie = ITrie<String>()
+        let indexTrie = IndexTrie<String>()
         indexTrie.addString("abc", index:"valuz")
 
         let indices = indexTrie.getIndices("a")
