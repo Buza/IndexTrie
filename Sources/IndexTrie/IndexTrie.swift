@@ -10,7 +10,7 @@ import Foundation
 
 public class IndexTrie<T : Comparable> {
 
-    class IndexTrieNode {
+    private class IndexTrieNode {
         var index                   : T?
         var childIndices            = Array<T>()
         var parent                  : IndexTrieNode?
