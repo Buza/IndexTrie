@@ -112,6 +112,15 @@ final class IndexTrieTests: XCTestCase {
         }
     }
     
+    func test9() {
+        let indexTrie = IndexTrie<String>()
+        indexTrie.addString("abc", index:"valuz")
+
+        let indices = indexTrie.getIndices("a")
+        XCTAssert(indices != nil, "Indices are nil")
+        XCTAssert(indices!.first! == "valuz", "Indices are incorrect")
+    }
+    
     func test10() {
         let indexTrie = IndexTrie<Int>(lazyLimit: 2)
         indexTrie.addString("acre kyxy", index:4)
@@ -124,15 +133,6 @@ final class IndexTrieTests: XCTestCase {
         XCTAssert(indices![0] == 7, "Matching lazy index incorrect")
     }
     
-    func test9() {
-        let indexTrie = IndexTrie<String>()
-        indexTrie.addString("abc", index:"valuz")
-
-        let indices = indexTrie.getIndices("a")
-        XCTAssert(indices != nil, "Indices are nil")
-        XCTAssert(indices!.first! == "valuz", "Indices are incorrect")
-    }
-    
     static var allTestsx = [
         ("test1", test1),
         ("test2", test2),
@@ -142,7 +142,8 @@ final class IndexTrieTests: XCTestCase {
         ("test6", test6),
         ("test7", test7),
         ("test8", test8),
-        ("test9", test9)
+        ("test9", test9),
+        ("test10", test10)
     ]
 
 }
