@@ -55,12 +55,13 @@ final class IndexTrieTests: XCTestCase {
     
     func test6() {
         let indexTrie = IndexTrie<Int>(lazyLimit: 2)
-        indexTrie.addString("abcasdfasdfasdf", index:5)
+        indexTrie.addString("acre kyxy", index:4)
+        indexTrie.addString("acre aczt", index:6)
+        indexTrie.addString("acre acbr", index:7)
 
-        let indices = indexTrie.getIndices("abcasdfasdfasd")
+        let indices = indexTrie.getIndices("acre ")
         XCTAssert(indices != nil, "Metadata is nil")
-        XCTAssert(indices!.count == 1, "Indices should have 1 entry")
-        XCTAssert(indices!.first! == 5, "Last index should be 5")
+        XCTAssert(indices!.count == 3, "Indices should have 3 entries")
     }
     
     func test7() {
@@ -111,6 +112,18 @@ final class IndexTrieTests: XCTestCase {
         }
     }
     
+    func test10() {
+        let indexTrie = IndexTrie<Int>(lazyLimit: 2)
+        indexTrie.addString("acre kyxy", index:4)
+        indexTrie.addString("acre aczt", index:6)
+        indexTrie.addString("acre acbr", index:7)
+
+        let indices = indexTrie.getIndices("acre acbr")
+        XCTAssert(indices != nil, "Metadata is nil")
+        XCTAssert(indices!.count == 1, "Lazy index count have 3 entries")
+        XCTAssert(indices![0] == 7, "Matching lazy index incorrect")
+    }
+    
     func test9() {
         let indexTrie = IndexTrie<String>()
         indexTrie.addString("abc", index:"valuz")
@@ -120,7 +133,7 @@ final class IndexTrieTests: XCTestCase {
         XCTAssert(indices!.first! == "valuz", "Indices are incorrect")
     }
     
-    static var allTests = [
+    static var allTestsx = [
         ("test1", test1),
         ("test2", test2),
         ("test3", test3),
@@ -131,4 +144,5 @@ final class IndexTrieTests: XCTestCase {
         ("test8", test8),
         ("test9", test9)
     ]
+
 }

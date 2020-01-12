@@ -14,8 +14,8 @@ public class IndexTrie<T : Comparable> {
         var index                   : T?
         var childIndices            = Array<T>()
         var parent                  : IndexTrieNode?
-        var children                = Dictionary<Substring, IndexTrieNode>()
-        lazy var pending            = Array<String>()
+        var children                = Dictionary<String, IndexTrieNode>()
+        lazy var pending            = Array<(string:String, index:T)>()
         
         init(index:T, parent:IndexTrieNode?=nil) {
             self.index = index
@@ -24,11 +24,11 @@ public class IndexTrie<T : Comparable> {
     }
 
     private var lazyLimit = -1;
-    private var rootDict : Dictionary<Substring, IndexTrieNode>!
+    private var rootDict : Dictionary<String, IndexTrieNode>!
     
     public init(lazyLimit: Int = -1) {
         self.lazyLimit = lazyLimit
-        rootDict = Dictionary<Substring, IndexTrieNode>()
+        rootDict = Dictionary<String, IndexTrieNode>()
     }
     
     public func clear() {
@@ -43,19 +43,18 @@ public class IndexTrie<T : Comparable> {
                 if let item = parentNode?.index as? T {
                     return [item]
                 }
-                
             }
             return parentNode?.childIndices as? Array<T>
         }
         
-        if let parent = parentNode, let parentIndex = parent.index {
-            if !parent.pending.isEmpty {
-                parent.pending.forEach( { add($0, index: parentIndex, parentNode:parent) })
-                parent.pending.removeAll()
-            }
+        //Because the node index itself is useless (always is the first used to generate it), need to add a pair
+        //to the pending list and use that
+        if let parent = parentNode, !parent.pending.isEmpty {
+            parent.pending.forEach( { add($0.string, index: $0.index, parentNode:parent) })
+            parent.pending.removeAll()
         }
 
-        let first = string[string.index(before: endIndex)..<endIndex]
+        let first = String(string[string.index(before: endIndex)..<endIndex])
 
         let tn : IndexTrieNode? = (parentNode != nil ? parentNode?.children[first] : rootDict[first])
         
@@ -88,11 +87,15 @@ public class IndexTrie<T : Comparable> {
             return
         }
 
-        let first = string[string.index(before: endIndex)..<endIndex]
-        
+        let first = String(string[string.index(before: endIndex)..<endIndex])
+  
         if lazyLimit == charOffset - 1 {
+            
             let remain = string[string.index(before: endIndex)..<string.endIndex]
-            parentNode?.pending.append(String(remain))
+            if let parentNodeVal = parentNode {
+                insertIndex(&parentNodeVal.childIndices, index:index)
+            }
+            parentNode?.pending.append((String(remain), index))
             return
         }
 
