@@ -133,17 +133,94 @@ final class IndexTrieTests: XCTestCase {
         XCTAssert(indices![0] == 7, "Matching lazy index incorrect")
     }
     
-    static var allTestsx = [
-        ("test1", test1),
-        ("test2", test2),
-        ("test3", test3),
-        ("test4", test4),
-        ("test5", test5),
-        ("test6", test6),
-        ("test7", test7),
-        ("test8", test8),
-        ("test9", test9),
-        ("test10", test10)
-    ]
+    func testSerialization() {
+        let indexTrie = IndexTrie<Int>()
+        indexTrie.addString("abc", index: 1)
+        indexTrie.addString("abd", index: 2)
+        indexTrie.addString("ghi", index: 3)
+        
+        // Serialize
+        let encoder = JSONEncoder()
+        guard let data = try? encoder.encode(indexTrie) else {
+            XCTFail("Failed to encode IndexTrie")
+            return
+        }
+        
+        // Deserialize
+        let decoder = JSONDecoder()
+        guard let deserializedTrie = try? decoder.decode(IndexTrie<Int>.self, from: data) else {
+            XCTFail("Failed to decode IndexTrie")
+            return
+        }
+        
+        // Test that deserialized trie works correctly
+        let indices1 = deserializedTrie.getIndices("a")
+        XCTAssert(indices1 != nil, "Indices for 'a' should not be nil")
+        XCTAssert(indices1!.count == 2, "Should have 2 indices for 'a'")
+        XCTAssert(indices1!.contains(1) && indices1!.contains(2), "Should contain indices 1 and 2")
+        
+        let indices2 = deserializedTrie.getIndices("g")
+        XCTAssert(indices2 != nil, "Indices for 'g' should not be nil")
+        XCTAssert(indices2!.count == 1, "Should have 1 index for 'g'")
+        XCTAssert(indices2!.first! == 3, "Should contain index 3")
+        
+        let indices3 = deserializedTrie.getIndices("abc")
+        XCTAssert(indices3 != nil, "Indices for 'abc' should not be nil")
+        XCTAssert(indices3!.count == 1, "Should have 1 index for 'abc'")
+        XCTAssert(indices3!.first! == 1, "Should contain index 1")
+    }
+    
+    func testLazyTrieSerialization() {
+        let lazyTrie = IndexTrie<Int>(lazyLimit: 2)
+        lazyTrie.addString("acre kyxy", index: 4)
+        lazyTrie.addString("acre aczt", index: 6)
+        lazyTrie.addString("acre acbr", index: 7)
+        
+        // Serialize
+        let encoder = JSONEncoder()
+        guard let data = try? encoder.encode(lazyTrie) else {
+            XCTFail("Failed to encode lazy IndexTrie")
+            return
+        }
+        
+        // Deserialize
+        let decoder = JSONDecoder()
+        guard let deserializedTrie = try? decoder.decode(IndexTrie<Int>.self, from: data) else {
+            XCTFail("Failed to decode lazy IndexTrie")
+            return
+        }
+        
+        // Test that lazy evaluation still works after deserialization
+        let indices = deserializedTrie.getIndices("acre ")
+        XCTAssert(indices != nil, "Indices should not be nil")
+        XCTAssert(indices!.count == 3, "Should have 3 indices")
+        XCTAssert(indices!.contains(4) && indices!.contains(6) && indices!.contains(7), "Should contain all expected indices")
+    }
+    
+    func testStringTypeSerialization() {
+        let indexTrie = IndexTrie<String>()
+        indexTrie.addString("test", index: "value1")
+        indexTrie.addString("testing", index: "value2")
+        
+        // Serialize
+        let encoder = JSONEncoder()
+        guard let data = try? encoder.encode(indexTrie) else {
+            XCTFail("Failed to encode String IndexTrie")
+            return
+        }
+        
+        // Deserialize
+        let decoder = JSONDecoder()
+        guard let deserializedTrie = try? decoder.decode(IndexTrie<String>.self, from: data) else {
+            XCTFail("Failed to decode String IndexTrie")
+            return
+        }
+        
+        // Test functionality
+        let indices = deserializedTrie.getIndices("test")
+        XCTAssert(indices != nil, "Indices should not be nil")
+        XCTAssert(indices!.count == 2, "Should have 2 indices")
+        XCTAssert(indices!.contains("value1") && indices!.contains("value2"), "Should contain both values")
+    }
 
 }

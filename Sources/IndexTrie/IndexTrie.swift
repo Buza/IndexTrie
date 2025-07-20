@@ -8,11 +8,17 @@
 
 import Foundation
 
-public class IndexTrie<T : Comparable> {
+public class IndexTrie<T : Comparable & Codable & Hashable> : Codable {
 
-    private class IndexTrieNode {
+    private struct PendingItem: Codable {
+        let string: String
+        let index: T
+    }
+    
+    private class IndexTrieNode : Codable {
         var index                   : T?
         var childIndices            = Array<T>()
+        private var childIndicesSet = Set<T>() // Fast O(1) lookups for duplicates
         var parent                  : IndexTrieNode?
         var children                = Dictionary<String, IndexTrieNode>()
         lazy var pending            = Array<(string:String, index:T)>()
@@ -20,6 +26,60 @@ public class IndexTrie<T : Comparable> {
         init(index:T, parent:IndexTrieNode?=nil) {
             self.index = index
             self.parent = parent
+        }
+        
+        func insertIndexOptimized(_ index: T) -> Bool {
+            // Fast O(1) duplicate check using Set
+            guard childIndicesSet.insert(index).inserted else {
+                return false // Already exists
+            }
+            
+            // Binary search for insertion position (O(log n))
+            var left = 0
+            var right = childIndices.count
+            while left < right {
+                let mid = (left + right) / 2
+                if childIndices[mid] < index {
+                    left = mid + 1
+                } else {
+                    right = mid
+                }
+            }
+            childIndices.insert(index, at: left)
+            return true
+        }
+        
+        private enum CodingKeys: String, CodingKey {
+            case index
+            case childIndices
+            case children
+            case pending
+        }
+        
+        required init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            index = try container.decodeIfPresent(T.self, forKey: .index)
+            childIndices = try container.decode([T].self, forKey: .childIndices)
+            childIndicesSet = Set(childIndices) // Rebuild set from array
+            children = try container.decode([String: IndexTrieNode].self, forKey: .children)
+            let pendingItems = try container.decode([PendingItem].self, forKey: .pending)
+            pending = pendingItems.map { (string: $0.string, index: $0.index) }
+            parent = nil // Will be restored during trie reconstruction
+            
+            // Restore parent relationships
+            for child in children.values {
+                child.parent = self
+            }
+        }
+        
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encodeIfPresent(index, forKey: .index)
+            try container.encode(childIndices, forKey: .childIndices)
+            try container.encode(children, forKey: .children)
+            let pendingItems = pending.map { PendingItem(string: $0.string, index: $0.index) }
+            try container.encode(pendingItems, forKey: .pending)
+            // Note: parent is not encoded to avoid circular references
         }
     }
 
@@ -31,102 +91,117 @@ public class IndexTrie<T : Comparable> {
         rootDict = Dictionary<String, IndexTrieNode>()
     }
     
+    private enum CodingKeys: String, CodingKey {
+        case lazyLimit
+        case rootDict
+    }
+    
+    required public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        lazyLimit = try container.decode(Int.self, forKey: .lazyLimit)
+        rootDict = try container.decode([String: IndexTrieNode].self, forKey: .rootDict)
+        
+        // Restore parent relationships for root nodes
+        for rootNode in rootDict.values {
+            rootNode.parent = nil
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(lazyLimit, forKey: .lazyLimit)
+        try container.encode(rootDict, forKey: .rootDict)
+    }
+    
     public func clear() {
         rootDict.removeAll()
     }
 
-    private func getIndicesWithParent<T : Equatable>(_ string: String,
-                                                     parentNode: IndexTrieNode? = nil,
-                                                     offset: Int = 1) -> Array<T>? {
-        guard let endIndex = string.index(string.startIndex, offsetBy: offset, limitedBy: string.endIndex) else {
+    private func getIndicesWithParent(_ characters: [Character],
+                                      parentNode: IndexTrieNode? = nil,
+                                      offset: Int = 0) -> Array<T>? {
+        guard offset < characters.count else {
             if parentNode?.childIndices.isEmpty ?? false {
-                if let item = parentNode?.index as? T {
+                if let item = parentNode?.index {
                     return [item]
                 }
             }
-            return parentNode?.childIndices as? Array<T>
+            return parentNode?.childIndices
         }
         
         //Because the node index itself is useless (always is the first used to generate it), need to add a pair
         //to the pending list and use that
         if let parent = parentNode, !parent.pending.isEmpty {
-            parent.pending.forEach( { add($0.string, index: $0.index, parentNode:parent) })
+            parent.pending.forEach( { 
+                let chars = Array($0.string)
+                add(chars, index: $0.index, parentNode:parent) 
+            })
             parent.pending.removeAll()
         }
 
-        let first = String(string[string.index(before: endIndex)..<endIndex])
+        let charKey = String(characters[offset])
 
-        let tn : IndexTrieNode? = (parentNode != nil ? parentNode?.children[first] : rootDict[first])
+        let tn : IndexTrieNode? = (parentNode != nil ? parentNode?.children[charKey] : rootDict[charKey])
         
         guard let foundNode = tn else {
             return nil
         }
         
-        return getIndicesWithParent(string, parentNode:foundNode, offset:offset+1)
+        return getIndicesWithParent(characters, parentNode:foundNode, offset:offset+1)
     }
     
-    private func insertIndex(_ childIndices: inout Array<T>, index: T) {
-        var desiredInsert = 0;
-        for i in 0..<childIndices.count {
-
-            guard childIndices[i] != index else {
-                return
-            }
-            
-            if index > childIndices[i] {
-                desiredInsert = i + 1
-            }
-        }
-        
-        childIndices.insert(index, at: desiredInsert)
+    private func insertIndex(_ node: IndexTrieNode, index: T) {
+        _ = node.insertIndexOptimized(index)
     }
 
-    private func add(_ string: String, index: T, parentNode: IndexTrieNode? = nil, charOffset: Int = 1) {
-        guard let endIndex = string.index(string.startIndex, offsetBy: charOffset, limitedBy: string.endIndex) else {
-            insertIndex(&parentNode!.childIndices, index:index)
-            return
-        }
-
-        let first = String(string[string.index(before: endIndex)..<endIndex])
-  
-        if lazyLimit == charOffset - 1 {
-            
-            let remain = string[string.index(before: endIndex)..<string.endIndex]
-            if let parentNodeVal = parentNode {
-                insertIndex(&parentNodeVal.childIndices, index:index)
+    private func add(_ characters: [Character], index: T, parentNode: IndexTrieNode? = nil, charOffset: Int = 0) {
+        guard charOffset < characters.count else {
+            if let parent = parentNode {
+                insertIndex(parent, index: index)
             }
-            parentNode?.pending.append((String(remain), index))
             return
         }
 
-        var tn : IndexTrieNode? = (parentNode != nil ? parentNode?.children[first] : rootDict[first])
+        let charKey = String(characters[charOffset])
+  
+        if lazyLimit == charOffset {
+            let remainingChars = Array(characters[charOffset...])
+            let remain = String(remainingChars)
+            if let parentNodeVal = parentNode {
+                insertIndex(parentNodeVal, index: index)
+            }
+            parentNode?.pending.append((remain, index))
+            return
+        }
+
+        var tn : IndexTrieNode? = (parentNode != nil ? parentNode?.children[charKey] : rootDict[charKey])
         if let node = tn {
             node.parent = parentNode
-            parentNode?.children[first] = node
+            parentNode?.children[charKey] = node
         } else {
             tn = IndexTrieNode(index:index, parent:parentNode)
-            var tmpParent  = tn!.parent
-            while let tmpParentVal = tmpParent {
-                insertIndex(&tmpParentVal.childIndices, index:index)
-                tmpParent = tmpParentVal.parent
-            }
-            tn!.parent?.children[first] = tn
+            tn!.parent?.children[charKey] = tn
         }
         
+        if parentNode == nil {
+            rootDict[charKey] = tn
+        }
+        
+        add(characters, index:index, parentNode: tn, charOffset: charOffset+1)
+        
+        // Update parent indices only once at the end of recursion
         if let parentNodeVal = parentNode {
-            insertIndex(&parentNodeVal.childIndices, index:index)
-        } else {
-            rootDict[first] = tn
+            insertIndex(parentNodeVal, index: index)
         }
-        
-        add(string, index:index, parentNode: tn, charOffset: charOffset+1)
     }
         
     public func getIndices(_ string: String) -> Array<T>? {
-        return getIndicesWithParent(string)
+        let characters = Array(string)
+        return getIndicesWithParent(characters)
     }
     
     public func addString(_ string: String, index: T) {
-        add(string, index:index)
+        let characters = Array(string)
+        add(characters, index:index)
     }
 }
